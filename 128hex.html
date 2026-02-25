@@ -163,10 +163,31 @@
   </div>
 
   <script>
+    function setCookie(name, value, days) {
+      const d = new Date();
+      d.setTime(d.getTime() + days * 24 * 60 * 60 * 1000);
+      document.cookie = name + '=' + encodeURIComponent(value) + ';expires=' + d.toUTCString() + ';path=/;SameSite=Lax';
+    }
+
+    function getCookie(name) {
+      const prefix = name + '=';
+      const parts = document.cookie.split(';');
+      for (let p of parts) {
+        p = p.trim();
+        if (p.startsWith(prefix)) return decodeURIComponent(p.substring(prefix.length));
+      }
+      return null;
+    }
+
+    let lastValidHex = null;
+
     function updateBitTable() {
       const input = document.getElementById('hexInput');
       const errorDiv = document.getElementById('errorMsg');
       const tbody = document.getElementById('bitBody');
+
+      // Save raw input to cookie (valid or not)
+      setCookie('lastHexInput', input.value, 30); // expires in 30 days
 
       // Clean input
       let hex = input.value.trim().replace(/\s+/g, '').toUpperCase();
@@ -180,9 +201,15 @@
 
       if (!/^[0-9A-F]{1,32}$/.test(hex)) {
         errorDiv.textContent = 'Invalid hex: please use only 0-9 and A-F (max 32 characters)';
-        <!-- tbody.innerHTML = ''; -->
-        return;
+        if (lastValidHex !== null) {
+          hex = lastValidHex; // revert to last valid input
+        } else {
+          hex = '0'; // fallback to zero if no valid input yet
+        }
       }
+
+      // remember last valid input for future reversion
+      lastValidHex = hex;
 
       // Pad with leading zeros to make exactly 32 hex digits (128 bits)
       hex = hex.padStart(32, '0');
@@ -269,8 +296,9 @@
     document.getElementById('hexInput').addEventListener('input', updateBitTable);
     document.getElementById('endianSelect').addEventListener('change', updateBitTable);
 
-    // Optional: initial example
-    document.getElementById('hexInput').value = 'A5C3F00D1234567890ABCDEF01234567';
+    // Initialize with last cookie value, or fallback to example
+    const saved = getCookie('lastHexInput');
+    document.getElementById('hexInput').value = saved !== null ? saved : 'A5C3F00D1234567890ABCDEF01234567';
     updateBitTable();
   </script>
 </body>
