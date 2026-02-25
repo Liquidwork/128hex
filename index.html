@@ -13,170 +13,151 @@
 </head>
 
 <body>
+  <div id="app">
+    <div class="container">
+      <h1>128-bit Hex → Bit Viewer</h1>
 
-  <div class="container">
-    <h1>128-bit Hex → Bit Viewer</h1>
+      <div class="input-area">
+        <input v-model="hexInput" type="text" placeholder="Enter 32 hex digits (128 bits)" maxlength="32"
+          autocomplete="off" />
+        <div class="error">{{ errorMsg }}</div>
+      </div>
 
-    <div class="input-area">
-      <input type="text" id="hexInput" placeholder="Enter 32 hex digits (128 bits)" maxlength="32" autocomplete="off" />
-      <div id="errorMsg" class="error"></div>
+      <table class="bit-table">
+        <tbody>
+          <template v-for="(row, rowIndex) in bitRows" :key="rowIndex">
+            <tr v-if="rowIndex > 0" class="row-gap">
+              <td :colspan="cols + 1"></td>
+            </tr>
+            <tr>
+              <th>Bits</th>
+              <th v-for="colIndex in cols" :key="`header-${rowIndex}-${colIndex}`">
+                {{ 127 - (rowIndex * cols + colIndex - 1) }}
+              </th>
+            </tr>
+            <tr>
+              <th>{{ row.label }}</th>
+              <td v-for="(bit, colIndex) in row.bits" :key="`bit-${rowIndex}-${colIndex}`"
+                :class="bit === '1' ? 'bit-1' : 'bit-0'"
+                :class.nibble-group="(colIndex + 1) % 4 === 0 && (colIndex + 1) % 8 !== 0 && colIndex + 1 !== cols"
+                :class.byte-group="(colIndex + 1) % 8 === 0 && colIndex + 1 !== cols">
+                {{ bit }}
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+
+      <div class="c-array-label">
+        C array initializer (click to select):
+        <select v-model="endian">
+          <option value="little">Little-endian (x86)</option>
+          <option value="big">Big-endian</option>
+        </select>
+      </div>
+      <div class="c-array">{{ cArrayText }}</div>
     </div>
-
-    <table class="bit-table" id="bitTable">
-      <!-- Header (bit positions) will be generated here -->
-      <tbody id="bitBody">
-        <!-- Bits will be generated here -->
-      </tbody>
-    </table>
-
-    <div class="c-array-label">
-      C array initializer (click to select):
-      <select id="endianSelect">
-        <option value="little" selected>Little-endian (x86)</option>
-        <option value="big">Big-endian</option>
-      </select>
-    </div>
-    <div class="c-array" id="cArray"></div>
   </div>
 
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
   <script>
-    function setCookie(name, value, days) {
-      const d = new Date();
-      d.setTime(d.getTime() + days * 24 * 60 * 60 * 1000);
-      document.cookie = name + '=' + encodeURIComponent(value) + ';expires=' + d.toUTCString() + ';path=/;SameSite=Lax';
-    }
+    const { createApp } = Vue;
+    const HEX_EXAMPLE = 'A5C3F00D1234567890ABCDEF01234567';
 
-    function getCookie(name) {
-      const prefix = name + '=';
-      const parts = document.cookie.split(';');
-      for (let p of parts) {
-        p = p.trim();
-        if (p.startsWith(prefix)) return decodeURIComponent(p.substring(prefix.length));
-      }
-      return null;
-    }
+    createApp({
+      data() {
+        return {
+          hexInput: this.getCookie('lastHexInput') ?? HEX_EXAMPLE,
+          endian: this.getCookie('lastEndian') ?? 'little',
+          lastValidHex: null,
+          cols: 16,
+          errorMsg: ''
+        };
+      },
+      computed: {
+        cleanHex() {
+          let hex = this.hexInput.trim().replace(/\s+/g, '').toUpperCase();
 
-    let lastValidHex = null;
-
-    function updateBitTable() {
-      const input = document.getElementById('hexInput');
-      const errorDiv = document.getElementById('errorMsg');
-      const tbody = document.getElementById('bitBody');
-
-      // Save raw input to cookie (valid or not)
-      setCookie('lastHexInput', input.value, 30); // expires in 30 days
-
-      // Clean input
-      let hex = input.value.trim().replace(/\s+/g, '').toUpperCase();
-
-      errorDiv.textContent = '';
-
-      // Validate
-      if (hex === '') {
-        hex = '0';
-      }
-
-      if (!/^[0-9A-F]{1,32}$/.test(hex)) {
-        errorDiv.textContent = 'Invalid hex: please use only 0-9 and A-F (max 32 characters)';
-        if (lastValidHex !== null) {
-          hex = lastValidHex; // revert to last valid input
-        } else {
-          hex = '0'; // fallback to zero if no valid input yet
-        }
-      }
-
-      // remember last valid input for future reversion
-      lastValidHex = hex;
-
-      // Pad with leading zeros to make exactly 32 hex digits (128 bits)
-      hex = hex.padStart(32, '0');
-
-      // Convert to binary string (128 chars of 0/1)
-      let binary = '';
-      for (let char of hex) {
-        const nibble = parseInt(char, 16);
-        binary += nibble.toString(2).padStart(4, '0');
-      }
-
-      // Clear previous table
-      tbody.innerHTML = '';
-
-      // Generate C array initializer
-      const cArrayDiv = document.getElementById('cArray');
-      const endian = document.getElementById('endianSelect').value;
-      const bytes = [];
-      for (let i = 0; i < 32; i += 2) {
-        bytes.push('0x' + hex.slice(i, i + 2).toLowerCase());
-      }
-      if (endian === 'little') {
-        bytes.reverse();
-      }
-      cArrayDiv.textContent = '{' + bytes.join(', ') + '}';
-
-      const cols = 16;
-      const rows = 128 / cols; // 8 rows
-
-      // Data rows (8 groups: index header + bit values)
-      for (let r = 0; r < rows; r++) {
-        // Spacer row between groups
-        if (r > 0) {
-          const spacer = document.createElement('tr');
-          spacer.className = 'row-gap';
-          const spacerTd = document.createElement('td');
-          spacerTd.colSpan = cols + 1;
-          spacer.appendChild(spacerTd);
-          tbody.appendChild(spacer);
-        }
-
-        // Header sub-row with actual bit indices
-        const headerRow = document.createElement('tr');
-        const corner = document.createElement('th');
-        corner.textContent = 'Bits';
-        headerRow.appendChild(corner);
-        for (let c = 0; c < cols; c++) {
-          const th = document.createElement('th');
-          th.textContent = 127 - (r * cols + c);
-          headerRow.appendChild(th);
-        }
-        tbody.appendChild(headerRow);
-
-        // Data sub-row
-        const tr = document.createElement('tr');
-        const label = document.createElement('th');
-        const highBit = 127 - r * cols;
-        const lowBit = highBit - cols + 1;
-        label.textContent = highBit + '–' + lowBit;
-        tr.appendChild(label);
-
-        for (let c = 0; c < cols; c++) {
-          const bitIndex = r * cols + c;
-          const td = document.createElement('td');
-          const bit = binary[bitIndex];
-          td.textContent = bit;
-          td.className = bit === '1' ? 'bit-1' : 'bit-0';
-
-          const colPos = c + 1;
-          if (colPos % 4 === 0 && colPos % 8 !== 0 && colPos !== cols) {
-            td.classList.add('nibble-group');
-          }
-          if (colPos % 8 === 0 && colPos !== cols) {
-            td.classList.add('byte-group');
+          if (hex === '') {
+            hex = '0';
           }
 
-          tr.appendChild(td);
+          if (!/^[0-9A-F]{1,32}$/.test(hex)) {
+            this.errorMsg = 'Invalid hex: please use only 0-9 and A-F (max 32 characters)';
+            if (this.lastValidHex !== null) {
+              // If the current input is invalid, revert to the last valid hex value
+              hex = this.lastValidHex;
+            } else {
+              hex = '0';
+            }
+          } else {
+            this.errorMsg = '';
+            this.lastValidHex = hex;
+          }
+
+          return hex.padStart(32, '0');
+        },
+        binary() {
+          let binary = '';
+          for (let char of this.cleanHex) {
+            const nibble = parseInt(char, 16);
+            binary += nibble.toString(2).padStart(4, '0');
+          }
+          return binary;
+        },
+        bitRows() {
+          const rows = [];
+          for (let r = 0; r < 8; r++) {
+            const highBit = 127 - r * this.cols;
+            const lowBit = highBit - this.cols + 1;
+            const bits = [];
+            for (let c = 0; c < this.cols; c++) {
+              const bitIndex = r * this.cols + c;
+              bits.push(this.binary[bitIndex]);
+            }
+            rows.push({
+              label: highBit + '-' + lowBit,
+              bits: bits
+            });
+          }
+          return rows;
+        },
+        cArrayText() {
+          const bytes = [];
+          for (let i = 0; i < 32; i += 2) {
+            bytes.push('0x' + this.cleanHex.slice(i, i + 2).toLowerCase());
+          }
+          if (this.endian === 'little') {
+            bytes.reverse();
+          }
+          return '{' + bytes.join(', ') + '}';
         }
-        tbody.appendChild(tr);
+      },
+      watch: {
+        hexInput(newVal) {
+          this.setCookie('lastHexInput', newVal, 30); // save for 30 days
+        },
+        endian(newVal) {
+          this.setCookie('lastEndian', newVal, 30); // save for 30 days
+        }
+      },
+      methods: {
+        setCookie(name, value, days) {
+          const d = new Date();
+          d.setTime(d.getTime() + days * 24 * 60 * 60 * 1000);
+          document.cookie = name + '=' + encodeURIComponent(value) + ';expires=' + d.toUTCString() + ';path=/;SameSite=Lax';
+        },
+        getCookie(name) {
+          const prefix = name + '=';
+          const parts = document.cookie.split(';');
+          for (let p of parts) {
+            p = p.trim();
+            if (p.startsWith(prefix)) return decodeURIComponent(p.substring(prefix.length));
+          }
+          return null;
+        }
       }
-    }
-
-    // Update on every change
-    document.getElementById('hexInput').addEventListener('input', updateBitTable);
-    document.getElementById('endianSelect').addEventListener('change', updateBitTable);
-
-    // Initialize with last cookie value, or fallback to example
-    const saved = getCookie('lastHexInput');
-    document.getElementById('hexInput').value = saved !== null ? saved : 'A5C3F00D1234567890ABCDEF01234567';
-    updateBitTable();
+    }).mount('#app');
   </script>
 </body>
 
