@@ -123,3 +123,8 @@ table.bit-table td {
     background: transparent !important;
     padding: 6px 0 !important;
 }
+
+[v-cloak] {
+    /* Hide elements with v-cloak attribute until Vue.js is ready */
+    display: none !important;
+}
