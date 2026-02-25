@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>128-bit Hex → Bit Table</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background: #0f0f1a;
+      color: #e0e0ff;
+      padding: 30px;
+      line-height: 1.5;
+    }
+
+    h1 {
+      color: #a5b4fc;
+      text-align: center;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .input-area {
+      text-align: center;
+      margin: 2rem 0;
+    }
+
+    input[type="text"] {
+      width: 380px;
+      max-width: 90%;
+      padding: 12px 16px;
+      font-family: "Courier New", Courier, monospace;
+      font-size: 1.2rem;
+      background: #1e1e38;
+      color: #d9d9ff;
+      border: 2px solid #4f46e5;
+      border-radius: 8px;
+    }
+
+    .error {
+      color: #ff6b6b;
+      margin-top: 0.5rem;
+      font-size: 0.95rem;
+    }
+
+    table.bit-table {
+      border-collapse: collapse;
+      margin: 2rem auto;
+      font-family: "Courier New", Courier, monospace;
+      background: #111122;
+      box-shadow: 0 0 20px rgba(79, 70, 229, 0.15);
+    }
+
+    table.bit-table th,
+    table.bit-table td {
+      padding: 8px 12px;
+      border: 1px solid #333366;
+      text-align: center;
+      min-width: 32px;
+    }
+
+    table.bit-table th {
+      background: #1a1a4d;
+      color: #a5b4fc;
+      font-weight: bold;
+    }
+
+    table.bit-table td {
+      background: #16162a;
+    }
+
+    .bit-1 {
+      background: #6366f1;
+      color: white;
+      font-weight: bold;
+    }
+
+    .bit-0 {
+      color: #8888aa;
+    }
+
+    .nibble-group {
+      border-right: 3px solid #4f46e5 !important;
+    }
+
+    .byte-group {
+      border-right: 5px double #6366f1 !important;
+    }
+
+    .c-array {
+      background: #1e1e38;
+      border: 2px solid #4f46e5;
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-family: "Courier New", Courier, monospace;
+      font-size: 1rem;
+      color: #d9d9ff;
+      word-break: break-all;
+      max-width: 900px;
+      margin: 0 auto 1rem;
+      text-align: left;
+      user-select: all;
+      cursor: pointer;
+    }
+
+    .c-array-label {
+      text-align: center;
+      color: #a5b4fc;
+      font-size: 0.9rem;
+      margin-bottom: 0.3rem;
+    }
+
+    .c-array-label select {
+      background: #1e1e38;
+      color: #d9d9ff;
+      border: 1px solid #4f46e5;
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      font-size: 0.9rem;
+      margin-left: 0.5rem;
+    }
+
+    .row-gap td,
+    .row-gap th {
+      border: none !important;
+      background: transparent !important;
+      padding: 6px 0 !important;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+    <h1>128-bit Hex → Bit Viewer</h1>
+
+    <div class="input-area">
+      <input type="text" id="hexInput" placeholder="Enter 32 hex digits (128 bits)" maxlength="32" autocomplete="off" />
+      <div id="errorMsg" class="error"></div>
+    </div>
+
+    <table class="bit-table" id="bitTable">
+      <!-- Header (bit positions) will be generated here -->
+      <tbody id="bitBody">
+        <!-- Bits will be generated here -->
+      </tbody>
+    </table>
+
+    <div class="c-array-label">
+      C array initializer (click to select):
+      <select id="endianSelect">
+        <option value="little" selected>Little-endian (x86)</option>
+        <option value="big">Big-endian</option>
+      </select>
+    </div>
+    <div class="c-array" id="cArray"></div>
+  </div>
+
+  <script>
+    function updateBitTable() {
+      const input = document.getElementById('hexInput');
+      const errorDiv = document.getElementById('errorMsg');
+      const tbody = document.getElementById('bitBody');
+
+      // Clean input
+      let hex = input.value.trim().replace(/\s+/g, '').toUpperCase();
+
+      errorDiv.textContent = '';
+
+      // Validate
+      if (hex === '') {
+        hex = '0';
+      }
+
+      if (!/^[0-9A-F]{1,32}$/.test(hex)) {
+        errorDiv.textContent = 'Invalid hex: please use only 0-9 and A-F (max 32 characters)';
+        <!-- tbody.innerHTML = ''; -->
+        return;
+      }
+
+      // Pad with leading zeros to make exactly 32 hex digits (128 bits)
+      hex = hex.padStart(32, '0');
+
+      // Convert to binary string (128 chars of 0/1)
+      let binary = '';
+      for (let char of hex) {
+        const nibble = parseInt(char, 16);
+        binary += nibble.toString(2).padStart(4, '0');
+      }
+
+      // Clear previous table
+      tbody.innerHTML = '';
+
+      // Generate C array initializer
+      const cArrayDiv = document.getElementById('cArray');
+      const endian = document.getElementById('endianSelect').value;
+      const bytes = [];
+      for (let i = 0; i < 32; i += 2) {
+        bytes.push('0x' + hex.slice(i, i + 2).toLowerCase());
+      }
+      if (endian === 'little') {
+        bytes.reverse();
+      }
+      cArrayDiv.textContent = '{' + bytes.join(', ') + '}';
+
+      const cols = 16;
+      const rows = 128 / cols; // 8 rows
+
+      // Data rows (8 groups: index header + bit values)
+      for (let r = 0; r < rows; r++) {
+        // Spacer row between groups
+        if (r > 0) {
+          const spacer = document.createElement('tr');
+          spacer.className = 'row-gap';
+          const spacerTd = document.createElement('td');
+          spacerTd.colSpan = cols + 1;
+          spacer.appendChild(spacerTd);
+          tbody.appendChild(spacer);
+        }
+
+        // Header sub-row with actual bit indices
+        const headerRow = document.createElement('tr');
+        const corner = document.createElement('th');
+        corner.textContent = 'Bits';
+        headerRow.appendChild(corner);
+        for (let c = 0; c < cols; c++) {
+          const th = document.createElement('th');
+          th.textContent = 127 - (r * cols + c);
+          headerRow.appendChild(th);
+        }
+        tbody.appendChild(headerRow);
+
+        // Data sub-row
+        const tr = document.createElement('tr');
+        const label = document.createElement('th');
+        const highBit = 127 - r * cols;
+        const lowBit = highBit - cols + 1;
+        label.textContent = highBit + '–' + lowBit;
+        tr.appendChild(label);
+
+        for (let c = 0; c < cols; c++) {
+          const bitIndex = r * cols + c;
+          const td = document.createElement('td');
+          const bit = binary[bitIndex];
+          td.textContent = bit;
+          td.className = bit === '1' ? 'bit-1' : 'bit-0';
+
+          const colPos = c + 1;
+          if (colPos % 4 === 0 && colPos % 8 !== 0 && colPos !== cols) {
+            td.classList.add('nibble-group');
+          }
+          if (colPos % 8 === 0 && colPos !== cols) {
+            td.classList.add('byte-group');
+          }
+
+          tr.appendChild(td);
+        }
+        tbody.appendChild(tr);
+      }
+    }
+
+    // Update on every change
+    document.getElementById('hexInput').addEventListener('input', updateBitTable);
+    document.getElementById('endianSelect').addEventListener('change', updateBitTable);
+
+    // Optional: initial example
+    document.getElementById('hexInput').value = 'A5C3F00D1234567890ABCDEF01234567';
+    updateBitTable();
+  </script>
+</body>
+
+</html>
