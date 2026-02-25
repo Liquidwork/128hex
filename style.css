@@ -1,0 +1,125 @@
+body {
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    background: #0f0f1a;
+    color: #e0e0ff;
+    padding: 30px;
+    line-height: 1.5;
+}
+
+h1 {
+    color: #a5b4fc;
+    text-align: center;
+}
+
+.container {
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+.input-area {
+    text-align: center;
+    margin: 2rem 0;
+}
+
+input[type="text"] {
+    width: 380px;
+    max-width: 90%;
+    padding: 12px 16px;
+    font-family: "Courier New", Courier, monospace;
+    font-size: 1.2rem;
+    background: #1e1e38;
+    color: #d9d9ff;
+    border: 2px solid #4f46e5;
+    border-radius: 8px;
+}
+
+.error {
+    color: #ff6b6b;
+    margin-top: 0.5rem;
+    font-size: 0.95rem;
+}
+
+table.bit-table {
+    border-collapse: collapse;
+    margin: 2rem auto;
+    font-family: "Courier New", Courier, monospace;
+    background: #111122;
+    box-shadow: 0 0 20px rgba(79, 70, 229, 0.15);
+}
+
+table.bit-table th,
+table.bit-table td {
+    padding: 8px 12px;
+    border: 1px solid #333366;
+    text-align: center;
+    min-width: 32px;
+}
+
+table.bit-table th {
+    background: #1a1a4d;
+    color: #a5b4fc;
+    font-weight: bold;
+}
+
+table.bit-table td {
+    background: #16162a;
+}
+
+.bit-1 {
+    background: #6366f1;
+    color: white;
+    font-weight: bold;
+}
+
+.bit-0 {
+    color: #8888aa;
+}
+
+.nibble-group {
+    border-right: 3px solid #4f46e5 !important;
+}
+
+.byte-group {
+    border-right: 5px double #6366f1 !important;
+}
+
+.c-array {
+    background: #1e1e38;
+    border: 2px solid #4f46e5;
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-family: "Courier New", Courier, monospace;
+    font-size: 1rem;
+    color: #d9d9ff;
+    word-break: break-all;
+    max-width: 900px;
+    margin: 0 auto 1rem;
+    text-align: left;
+    user-select: all;
+    cursor: pointer;
+}
+
+.c-array-label {
+    text-align: center;
+    color: #a5b4fc;
+    font-size: 0.9rem;
+    margin-bottom: 0.3rem;
+}
+
+.c-array-label select {
+    background: #1e1e38;
+    color: #d9d9ff;
+    border: 1px solid #4f46e5;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 0.9rem;
+    margin-left: 0.5rem;
+}
+
+.row-gap td,
+.row-gap th {
+    border: none !important;
+    background: transparent !important;
+    padding: 6px 0 !important;
+}
