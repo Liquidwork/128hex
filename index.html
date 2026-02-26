@@ -30,17 +30,18 @@
               <td :colspan="cols + 1"></td>
             </tr>
             <tr>
-              <th>Bits</th>
               <th v-for="colIndex in cols" :key="`header-${rowIndex}-${colIndex}`">
                 {{ 127 - (rowIndex * cols + colIndex - 1) }}
               </th>
             </tr>
             <tr>
-              <th>{{ row.label }}</th>
-              <td v-for="(bit, colIndex) in row.bits" :key="`bit-${rowIndex}-${colIndex}`"
-                :class="bit === '1' ? 'bit-1' : 'bit-0'"
-                :class.nibble-group="(colIndex + 1) % 4 === 0 && (colIndex + 1) % 8 !== 0 && colIndex + 1 !== cols"
-                :class.byte-group="(colIndex + 1) % 8 === 0 && colIndex + 1 !== cols">
+              <td v-for="(bit, colIndex) in row.bits" :key="`bit-${rowIndex}-${colIndex}`" :class="[
+                bit === '1' ? 'bit-1' : 'bit-0',
+                {
+                  'nibble-group': (colIndex + 1) % 4 === 0 && (colIndex + 1) % 8 !== 0 && (colIndex + 1) !== cols,
+                  'byte-group':  (colIndex + 1) % 8 === 0  && (colIndex + 1) !== cols
+                }
+              ]">
                 {{ bit }}
               </td>
             </tr>
