@@ -18,8 +18,16 @@
       <h1>128-bit Hex → Bit Viewer</h1>
 
       <div class="input-area">
-        <input v-model="hexInput" type="text" placeholder="Enter 32 hex digits (128 bits)" maxlength="32"
-          autocomplete="off" />
+        <div class="input-wrapper">
+          <input v-model="hexInput" type="text" placeholder="Enter 32 hex digits (128 bits)" maxlength="32"
+            autocomplete="off" style="text-transform: uppercase;" />
+          <div class="input-overlay">
+            <span v-for="(char, idx) in hexInput.toUpperCase()" :key="idx"
+              :class="{ 'char-highlighted': hoveredCharIndex === idx + 32 - hexInput.length }">
+              {{ char }}
+            </span>
+          </div>
+        </div>
         <div class="error">{{ errorMsg }}</div>
       </div>
 
@@ -30,18 +38,25 @@
               <td :colspan="cols + 1"></td>
             </tr>
             <tr>
-              <th v-for="colIndex in cols" :key="`header-${rowIndex}-${colIndex}`">
+              <!-- Shit, colIndex starts from 1??? WTF -->
+              <th v-for="colIndex in cols" :key="`header-${rowIndex}-${colIndex}`"
+                @mouseover="hoveredCharIndex = Math.floor((rowIndex * cols + colIndex - 1) / 4)"
+                @mouseleave="hoveredCharIndex = null"
+                :class="{ 'index-hovered': hoveredCharIndex === Math.floor((rowIndex * cols + colIndex - 1) / 4) }">
                 {{ 127 - (rowIndex * cols + colIndex - 1) }}
               </th>
             </tr>
             <tr>
+              <!-- This colIndex however, starts from 0. -->
               <td v-for="(bit, colIndex) in row.bits" :key="`bit-${rowIndex}-${colIndex}`" :class="[
                 bit === '1' ? 'bit-1' : 'bit-0',
                 {
                   'nibble-group': (colIndex + 1) % 4 === 0 && (colIndex + 1) % 8 !== 0 && (colIndex + 1) !== cols,
-                  'byte-group':  (colIndex + 1) % 8 === 0  && (colIndex + 1) !== cols
+                  'byte-group':  (colIndex + 1) % 8 === 0  && (colIndex + 1) !== cols,
+                  'bit-hovered': hoveredCharIndex === Math.floor((rowIndex * cols + colIndex) / 4)
                 }
-              ]">
+              ]" @mouseover="hoveredCharIndex = Math.floor((rowIndex * cols + colIndex) / 4)"
+                @mouseleave="hoveredCharIndex = null">
                 {{ bit }}
               </td>
             </tr>
@@ -72,7 +87,8 @@
           endian: this.getCookie('lastEndian') ?? 'little',
           lastValidHex: null,
           cols: 16,
-          errorMsg: ''
+          errorMsg: '',
+          hoveredCharIndex: null,
         };
       },
       computed: {
