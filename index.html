@@ -15,6 +15,12 @@
 <body>
   <div v-cloak id="app">
     <div class="container">
+      <div style="text-align: right; margin-bottom: 1rem;">
+        <button @click="toggleTheme"
+          style="padding: 8px 16px; border: 1px solid var(--accent-primary); background: var(--bg-secondary); color: var(--text-primary); border-radius: 4px; cursor: pointer; font-size: 0.9rem;">
+          {{ isDarkTheme ? '☀️ Light' : '🌙 Dark' }}
+        </button>
+      </div>
       <h1>128-bit Hex → Bit Viewer</h1>
 
       <div class="input-area">
@@ -83,13 +89,25 @@
     createApp({
       data() {
         return {
-          hexInput: this.getCookie('lastHexInput') ?? HEX_EXAMPLE,
-          endian: this.getCookie('lastEndian') ?? 'little',
+          hexInput: localStorage.getItem('lastHexInput') ?? HEX_EXAMPLE,
+          endian: localStorage.getItem('lastEndian') ?? 'little',
           lastValidHex: null,
           cols: 16,
           errorMsg: '',
           hoveredCharIndex: null,
+          isDarkTheme: true,
         };
+      },
+      mounted() {
+        // Load theme preference
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'light') {
+          this.isDarkTheme = false;
+          document.body.classList.add('light-theme');
+        } else {
+          this.isDarkTheme = true;
+          document.body.classList.remove('light-theme');
+        }
       },
       computed: {
         cleanHex() {
@@ -152,13 +170,23 @@
       },
       watch: {
         hexInput(newVal) {
-          this.setCookie('lastHexInput', newVal, 30); // save for 30 days
+          localStorage.setItem('lastHexInput', newVal);
         },
         endian(newVal) {
-          this.setCookie('lastEndian', newVal, 30); // save for 30 days
+          localStorage.setItem('lastEndian', newVal);
         }
       },
       methods: {
+        toggleTheme() {
+          this.isDarkTheme = !this.isDarkTheme;
+          if (this.isDarkTheme) {
+            document.body.classList.remove('light-theme');
+            localStorage.setItem('theme', 'dark');
+          } else {
+            document.body.classList.add('light-theme');
+            localStorage.setItem('theme', 'light');
+          }
+        },
         setCookie(name, value, days) {
           const d = new Date();
           d.setTime(d.getTime() + days * 24 * 60 * 60 * 1000);
