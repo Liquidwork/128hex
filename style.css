@@ -68,6 +68,29 @@ h1 {
     margin: 2rem 0;
 }
 
+.settings-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    justify-content: center;
+    margin: 0 auto 0.75rem;
+}
+
+.settings-row label {
+    font-size: 0.95rem;
+}
+
+.settings-row select {
+    padding: 11px 8px;
+    height: 46px;
+    line-height: 1.2;
+    border: 2px solid var(--accent-primary);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border-radius: 8px;
+    box-sizing: border-box;
+}
+
 .input-wrapper {
     position: relative;
     display: inline-block;

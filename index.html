@@ -24,12 +24,20 @@
       <h1>128-bit Hex → Bit Viewer</h1>
 
       <div class="input-area">
+        <div class="settings-row">
+          <label for="bitWidth">Input bits:</label>
+          <select id="bitWidth" v-model.number="bitWidth">
+            <option :value="32">32</option>
+            <option :value="64">64</option>
+            <option :value="128">128</option>
+          </select>
+        </div>
         <div class="input-wrapper">
-          <input v-model="hexInput" type="text" placeholder="Enter 32 hex digits (128 bits)" maxlength="32"
-            autocomplete="off" style="text-transform: uppercase;" />
+          <input v-model="hexInput" type="text" :placeholder="inputPlaceholder" :maxlength="hexLength"
+            autocomplete="off" />
           <div class="input-overlay">
             <span v-for="(char, idx) in hexInput.toUpperCase()" :key="idx"
-              :class="{ 'char-highlighted': hoveredCharIndex === idx + 32 - hexInput.length }">
+              :class="{ 'char-highlighted': hoveredCharIndex === idx + hexLength - hexInput.length }">
               {{ char }}
             </span>
           </div>
@@ -49,7 +57,7 @@
                 @mouseover="hoveredCharIndex = Math.floor((rowIndex * cols + colIndex - 1) / 4)"
                 @mouseleave="hoveredCharIndex = null"
                 :class="{ 'index-hovered': hoveredCharIndex === Math.floor((rowIndex * cols + colIndex - 1) / 4) }">
-                {{ 127 - (rowIndex * cols + colIndex - 1) }}
+                {{ (bitWidth - 1) - (rowIndex * cols + colIndex - 1) }}
               </th>
             </tr>
             <tr>
@@ -91,6 +99,7 @@
         return {
           hexInput: localStorage.getItem('lastHexInput') ?? HEX_EXAMPLE,
           endian: localStorage.getItem('lastEndian') ?? 'little',
+          bitWidth: Number(localStorage.getItem('lastBitWidth') ?? 128),
           lastValidHex: null,
           cols: 16,
           errorMsg: '',
@@ -110,6 +119,12 @@
         }
       },
       computed: {
+        hexLength() {
+          return this.bitWidth / 4;
+        },
+        inputPlaceholder() {
+          return `Enter ${this.hexLength} hex digits (${this.bitWidth} bits)`;
+        },
         cleanHex() {
           let hex = this.hexInput.trim().replace(/\s+/g, '').toUpperCase();
 
@@ -117,10 +132,12 @@
             hex = '0';
           }
 
-          if (!/^[0-9A-F]{1,32}$/.test(hex)) {
-            this.errorMsg = 'Invalid hex: please use only 0-9 and A-F (max 32 characters)';
+          const maxLen = this.hexLength;
+          const pattern = new RegExp(`^[0-9A-F]{1,${maxLen}}$`);
+
+          if (!pattern.test(hex)) {
+            this.errorMsg = `Invalid hex: please use only 0-9 and A-F (max ${maxLen} characters)`;
             if (this.lastValidHex !== null) {
-              // If the current input is invalid, revert to the last valid hex value
               hex = this.lastValidHex;
             } else {
               hex = '0';
@@ -130,7 +147,7 @@
             this.lastValidHex = hex;
           }
 
-          return hex.padStart(32, '0');
+          return hex.padStart(maxLen, '0');
         },
         binary() {
           let binary = '';
@@ -142,13 +159,20 @@
         },
         bitRows() {
           const rows = [];
-          for (let r = 0; r < 8; r++) {
-            const highBit = 127 - r * this.cols;
-            const lowBit = highBit - this.cols + 1;
+          const totalBits = this.bitWidth;
+          const rowCount = Math.ceil(totalBits / this.cols);
+
+          for (let r = 0; r < rowCount; r++) {
+            const highBit = this.bitWidth - 1 - r * this.cols;
+            const lowBit = Math.max(0, highBit - this.cols + 1);
             const bits = [];
             for (let c = 0; c < this.cols; c++) {
               const bitIndex = r * this.cols + c;
-              bits.push(this.binary[bitIndex]);
+              if (bitIndex < totalBits) {
+                bits.push(this.binary[bitIndex]);
+              } else {
+                bits.push('0');
+              }
             }
             rows.push({
               label: highBit + '-' + lowBit,
@@ -159,7 +183,8 @@
         },
         cArrayText() {
           const bytes = [];
-          for (let i = 0; i < 32; i += 2) {
+          const byteCount = this.hexLength / 2;
+          for (let i = 0; i < byteCount * 2; i += 2) {
             bytes.push('0x' + this.cleanHex.slice(i, i + 2).toLowerCase());
           }
           if (this.endian === 'little') {
@@ -174,6 +199,12 @@
         },
         endian(newVal) {
           localStorage.setItem('lastEndian', newVal);
+        },
+        bitWidth(newVal) {
+          localStorage.setItem('lastBitWidth', newVal);
+          if (this.hexInput.length > this.hexLength) {
+            this.hexInput = this.hexInput.slice(0, this.hexLength);
+          }
         }
       },
       methods: {
